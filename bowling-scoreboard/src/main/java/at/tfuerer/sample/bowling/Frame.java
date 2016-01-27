@@ -3,7 +3,7 @@ package at.tfuerer.sample.bowling;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Frame {
+class Frame {
     private final List<Try> tries = new ArrayList<>(3);
 	private int extraPinsForSplit = 0;
 	
@@ -15,14 +15,25 @@ public class Frame {
 		return this;
 	}
 
-	public int display() {
+	public int calculate() {
 		return tries.stream().mapToInt(t -> t.getPins()).sum() + this.extraPinsForSplit;
 	}
 
-	public Frame extraPinsForSplit(Try trie) {
-		this.extraPinsForSplit = trie.getPins();
-		
+	public Frame extraPins(int pins) {
+		this.extraPinsForSplit += pins;
 		return this;
+	}
+
+	public boolean isSplit() {
+		return calculate() >= 10 && tries.size() == 2;
+	}
+	
+	public boolean isStrike() {
+		return calculate() >= 10 && tries.size() == 1;
+	}
+
+	public boolean isIncomplete() {
+		return tries.size() < 2 && (tries.size() == 1 && tries.get(0).getPins() < 10);
 	}
 
 }

@@ -1,6 +1,6 @@
 package at.tfuerer.sample.bowling;
 
-public class Try {
+final class Try {
 
 	private final int pins;
 
