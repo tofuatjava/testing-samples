@@ -34,5 +34,21 @@ public class GameTest {
 		game.addTry(10).addTry(5).addTry(4);
 		assertThat(game.calculate(), Matchers.equalTo(28));
 	}
+	
+	@Test
+	public void calculateFullGame() throws Exception {
+		Game game = new Game();
+		game.addTry(5).addTry(5)
+		    .addTry(10)
+		    .addTry(10)
+		    .addTry(10)
+		    .addTry(9).addTry(0)
+		    .addTry(0).addTry(8)
+		    .addTry(9).addTry(0)
+		    .addTry(7).addTry(0)
+		    .addTry(1).addTry(8)
+		    .addTry(1).addTry(2);
+		assertThat(game.calculate(), Matchers.equalTo(143));
+	}
 
 }
