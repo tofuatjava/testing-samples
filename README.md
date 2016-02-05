@@ -61,3 +61,108 @@ No Problem, this is why we wrote also tests for Try and Frame. So we can be sure
 	}
 
 But wait! What if we have more complex classes to tests with many dependencies to others, like classes which get some other classes injected (e.g. with Spring).
+
+## That is were we should use Dummys,Fakes,Stubs or finaly Mocks
+Okay what are these funny things? Martin Fowler wrote a very good article about this ([mocks aren't stubs @ Martin Fowler](url "http://martinfowler.com/articles/mocksArentStubs.html")). Just a short description what Martin thinks about: 
+*   **Dummy** objects are passed around but never actually used. Usually they are just used to fill parameter lists.
+*   **Fake** objects actually have working implementations, but usually take some shortcut which makes them not suitable for production (an in memory database is a good example).
+*   **Stubs** provide canned answers to calls made during the test, usually not responding at all to anything outside what's programmed in for the test. Stubs may also record information about calls, such as an email gateway stub that remembers the messages it 'sent', or maybe only how many messages it 'sent'.
+*   **Mocks** are what we are talking about here: objects pre-programmed with expectations which form a specification of the calls they are expected to receive.
+
+Let's see:
+
+	@RunWith(MockitoJUnitRunner.class)
+	public class CommandAndQueryBusTest {
+		private static class DummyEntity implements IEntity {
+		};
+	
+		@Mock
+		private ICommandHandler<ICommand, IEntity> commandHandlerMock;
+		@Mock
+		private CommandHandlerProvider commandHandlerProviderMock;
+		@Mock
+		private IQueryHandler<IQuery, IEntity> queryHandlerMock;
+		@Mock
+		private QueryHandlerProvider queryHandlerProviderMock;
+		@Mock
+		private IEntityConverter<IEntity, ?> convertertMock;
+		@Mock
+		private EntityConverterProvider converterProviderMock;
+	
+		@InjectMocks
+		private CommandAndQueryBus bus;
+	
+		@Test
+		public void executeCommand() {
+			when(commandHandlerProviderMock.getHandler(any(ICommand.class))).thenReturn(commandHandlerMock);
+			when(commandHandlerMock.handle(any(ICommand.class))).thenReturn(new DummyEntity());
+			when(converterProviderMock.getConverter(any(IEntity.class)))
+					.thenAnswer(new Answer<IEntityConverter<IEntity, ?>>() {
+						@Override
+						public IEntityConverter<IEntity, ?> answer(InvocationOnMock invocation) throws Throwable {
+							return convertertMock;
+						}
+					});
+			when(convertertMock.convert(any(IEntity.class))).thenAnswer(new Answer<Object>() {
+				@Override
+				public Object answer(InvocationOnMock invocation) throws Throwable {
+					return new Object();
+				}
+			});
+	
+			Object result = bus.execute(new ICommand() {
+			});
+	
+			assertNotNull(result);
+			verify(commandHandlerProviderMock).getHandler(any(ICommand.class));
+			verify(commandHandlerMock).handle(any(ICommand.class));
+			verify(converterProviderMock).getConverter(any(DummyEntity.class));
+			verify(convertertMock).convert(any(DummyEntity.class));
+			verify(queryHandlerMock, times(0)).handle(any(IQuery.class));
+		}
+	
+		@Test
+		public void querySingleObject() throws Exception {
+			when(queryHandlerProviderMock.getQueryHandler(any(IQuery.class))).thenReturn(queryHandlerMock);
+			when(queryHandlerMock.handle(any(IQuery.class))).thenReturn(Arrays.asList(new DummyEntity()));
+			when(converterProviderMock.getConverter(any(IEntity.class)))
+					.thenAnswer(new Answer<IEntityConverter<IEntity, ?>>() {
+						@Override
+						public IEntityConverter<IEntity, ?> answer(InvocationOnMock invocation) throws Throwable {
+							return convertertMock;
+						}
+					});
+			when(convertertMock.convertAll(any())).thenAnswer(new Answer<List<Object>>() {
+				@Override
+				public List<Object> answer(InvocationOnMock invocation) throws Throwable {
+					return Arrays.asList(new Object());
+				}
+			});
+	
+			Object result = bus.query(new IQuery() {
+			});
+	
+			assertNotNull(result);
+			
+			verify(queryHandlerProviderMock).getQueryHandler(any(IQuery.class));
+			verify(queryHandlerMock).handle(any(IQuery.class));
+			verify(converterProviderMock).getConverter(any(DummyEntity.class));
+			verify(convertertMock).convertAll(any());
+		}
+	
+		@Test(expected = ObjectNotFoundException.class)
+		public void querySingleObjectButNotFound() throws Exception {
+			when(queryHandlerProviderMock.getQueryHandler(any(IQuery.class))).thenReturn(queryHandlerMock);
+			when(queryHandlerMock.handle(any(IQuery.class))).thenReturn(null);
+			
+			bus.query(new IQuery() {
+			});
+		}
+	}
+
+Finally it is up to you to produce test to protect your code quality.
+
+
+
+
+
